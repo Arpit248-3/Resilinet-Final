@@ -81,7 +81,31 @@ app.post('/api/distribute-aid', async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
+// POST: Create a new SOS Alert from Mobile
+app.post('/api/sos', async (req, res) => {
+    try {
+        const { name, phone, message, location } = req.body;
+        
+        const newSOS = new SOS({
+            name,
+            phone,
+            message,
+            location: {
+                type: 'Point',
+                coordinates: [location.longitude, location.latitude] // Ensure GeoJSON order: [Lng, Lat]
+            },
+            status: 'Active',
+            timestamp: new Date()
+        });
 
+        await newSOS.save();
+        console.log(`🚨 SOS Received from ${name} at ${location.latitude}, ${location.longitude}`);
+        res.status(201).json({ success: true, message: "SOS Alert received by command center." });
+    } catch (err) {
+        console.error("SOS Save Error:", err);
+        res.status(500).json({ error: "Failed to process SOS signal." });
+    }
+});
 // backend/server.js
 const PORT = 5000;
 // Passing '0.0.0.0' allows the server to accept connections from your phone/emulator
