@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { CameraView, useCameraPermissions } from 'expo-camera'; // Updated for latest Expo Camera API
-import * as FaceDetector from 'expo-face-detector';
+import { CameraView, useCameraPermissions } from 'expo-camera'; 
+// import * as FaceDetector from 'expo-face-detector'; // DISABLED NATIVE MODULE
 import QRCode from 'react-native-qrcode-svg';
 
 export default function HealthCheck() {
@@ -9,12 +9,11 @@ export default function HealthCheck() {
   const [cryptoToken, setCryptoToken] = useState(null);
   const [permission, requestPermission] = useCameraPermissions();
 
-  // Handle Camera Permissions
   if (!permission) return <View />;
   if (!permission.granted) {
     return (
       <View style={styles.container}>
-        <Text style={{ textAlign: 'center', marginTop: 50 }}>We need your permission to show the camera</Text>
+        <Text style={{ textAlign: 'center', marginTop: 50, color: '#fff' }}>Camera permission required for triage.</Text>
         <TouchableOpacity style={styles.button} onPress={requestPermission}>
           <Text style={styles.buttonText}>Grant Permission</Text>
         </TouchableOpacity>
@@ -22,13 +21,12 @@ export default function HealthCheck() {
     );
   }
 
-  const handleFacesDetected = ({ faces }) => {
-    setPeopleCount(faces.length);
-    if (faces.length > 0 && !cryptoToken) {
-      // Generate Cryptographic ID for the victim based on first face detected
-      const token = `RESILI-V-${faces[0].faceID}-${Date.now()}`;
-      setCryptoToken(token);
-    }
+  // SIMULATED TRIAGE (Replaces handleFacesDetected to avoid native module call)
+  const simulateTriage = () => {
+    const mockCount = 1;
+    setPeopleCount(mockCount);
+    const token = `RESILI-V-MOCK-${Math.floor(Math.random() * 1000)}-${Date.now()}`;
+    setCryptoToken(token);
   };
 
   const resetScanner = () => {
@@ -38,16 +36,10 @@ export default function HealthCheck() {
 
   return (
     <View style={styles.container}>
-      {/* Camera View for Face Detection */}
+      {/* Camera View - faceDetectorSettings removed to avoid crash */}
       <CameraView 
         style={styles.camera}
-        onFacesDetected={handleFacesDetected}
-        faceDetectorSettings={{
-          mode: FaceDetector.FaceDetectorMode.fast,
-          detectLandmarks: FaceDetector.FaceDetectorLandmarks.none,
-          runClassifications: FaceDetector.FaceDetectorClassifications.none,
-          minDetectionInterval: 1000,
-        }}
+        // onFacesDetected={handleFacesDetected} // DISABLED
       />
       
       <View style={styles.overlay}>
@@ -65,7 +57,10 @@ export default function HealthCheck() {
           </View>
         ) : (
           <View style={styles.searchingContainer}>
-            <Text style={styles.searchingText}>SCANNING FOR BIOMETRIC DATA...</Text>
+            <Text style={styles.searchingText}>NATIVE FACE DETECTION DISABLED FOR EXPO GO</Text>
+            <TouchableOpacity style={styles.button} onPress={simulateTriage}>
+              <Text style={styles.buttonText}>SIMULATE BIOMETRIC SCAN</Text>
+            </TouchableOpacity>
           </View>
         )}
       </View>
@@ -75,7 +70,7 @@ export default function HealthCheck() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000' },
-  camera: { height: '40%' },
+  camera: { height: '30%' }, // Reduced height to save resources
   overlay: { 
     padding: 20, 
     alignItems: 'center', 
@@ -95,10 +90,10 @@ const styles = StyleSheet.create({
   },
   qrLabel: { fontSize: 10, fontWeight: 'bold', marginBottom: 15, color: '#333' },
   tokenText: { fontSize: 9, marginTop: 10, color: '#666', fontFamily: 'monospace' },
-  searchingContainer: { marginTop: 50, alignItems: 'center' },
-  searchingText: { color: '#00ff41', fontSize: 12, opacity: 0.7 },
-  button: { backgroundColor: '#00ff41', padding: 15, borderRadius: 8, marginTop: 20 },
-  buttonText: { color: '#000', fontWeight: 'bold' },
+  searchingContainer: { marginTop: 30, alignItems: 'center' },
+  searchingText: { color: '#888', fontSize: 10, marginBottom: 20, textAlign: 'center' },
+  button: { backgroundColor: '#00ff41', padding: 15, borderRadius: 8, marginTop: 10 },
+  buttonText: { color: '#000', fontWeight: 'bold', fontSize: 12 },
   resetButton: { 
     marginTop: 20, 
     paddingVertical: 10, 
