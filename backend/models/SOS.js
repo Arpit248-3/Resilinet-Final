@@ -1,19 +1,19 @@
+// backend/models/SOS.js
 const mongoose = require('mongoose');
 
 const sosSchema = new mongoose.Schema({
   userId: String,
-  severity: { type: String, enum: ['Minor', 'Moderate', 'Critical'] },
   location: {
     type: { type: String, default: 'Point' },
     coordinates: [Number] // [longitude, latitude]
   },
-  voiceTranscript: String,
-  isMeshVerified: { type: Boolean, default: false },
-  biometricHash: String,    // For the biometric fallback
-  handshakeToken: String,   // For the Cryptographic QR
+  severity: String,
   status: { type: String, default: 'Active' },
+  isMeshVerified: { type: Boolean, default: false },
   timestamp: { type: Date, default: Date.now }
 });
 
-sosSchema.index({ location: '2dsphere' }); // Crucial for clustering
+// CRITICAL: This line creates the index required for $near queries
+sosSchema.index({ location: "2dsphere" });
+
 module.exports = mongoose.model('SOS', sosSchema);

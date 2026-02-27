@@ -1,45 +1,38 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import LiveTable from '../components/LiveTable';
 import RescueVerify from '../components/RescueVerify';
+import MapComponent from '../components/MapComponent';
 
-const Dashboard = ({ alerts, refreshData }) => {
+const Dashboard = ({ alerts, refreshData, runVisualTriage, isTriageLoading }) => {
     const [selectedVictim, setSelectedVictim] = useState(null);
-    const [isScanning, setIsScanning] = useState(false);
-
-    // Simulate Edge AI Visual Triage
-    const simulateVisualTriage = async () => {
-        setIsScanning(true);
-        // Simulating 2 seconds of Edge AI processing (counting people/detecting injuries)
-        setTimeout(async () => {
-            console.log("Edge AI: Cluster detected. 5+ victims identified. Escalating Priority.");
-            
-            // Trigger a backend update to simulate real-time cluster risk increase
-            await fetch('http://localhost:5000/api/trigger-cluster-escalation', { method: 'POST' });
-            
-            refreshData();
-            setIsScanning(false);
-            alert("Visual Triage Complete: Cluster Risk Factor applied to local zone.");
-        }, 2000);
-    };
 
     return (
         <div className="dashboard-container">
             <header className="command-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-                <h2>📍 OPERATIONAL COMMAND MAP</h2>
+                <h2>📍 TACTICAL COMMAND MAP</h2>
                 <button 
                     className="btn-triage" 
-                    onClick={simulateVisualTriage}
-                    style={{ background: 'var(--neon-blue)', color: '#000', fontWeight: 'bold' }}
+                    onClick={runVisualTriage}
+                    disabled={isTriageLoading}
+                    style={{ background: isTriageLoading ? '#333' : 'var(--neon-blue)', color: '#000' }}
                 >
-                    {isScanning ? "⌛ ANALYZING SCENE..." : "📸 CAMERA VISUAL TRIAGE"}
+                    {isTriageLoading ? "⌛ ANALYZING..." : "📸 CAMERA VISUAL TRIAGE"}
                 </button>
             </header>
 
-            <div className="main-layout" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px' }}>
-                {/* 1. Live Intelligence Feed */}
+            <div className="main-layout" style={{ 
+                display: 'grid', 
+                gridTemplateColumns: '1fr 1.5fr 1fr', 
+                gap: '20px',
+                height: 'calc(100vh - 200px)' 
+            }}>
+                {/* Left: Feed */}
                 <LiveTable alerts={alerts} onSelectVictim={setSelectedVictim} />
 
-                {/* 2. Active Verification Panel (Triple-Tier Logic) */}
+                {/* Center: Interactive Map */}
+                <MapComponent alerts={alerts} onSelectVictim={setSelectedVictim} />
+
+                {/* Right: Action Panel */}
                 <aside className="action-panel">
                     {selectedVictim ? (
                         <RescueVerify 
@@ -50,9 +43,7 @@ const Dashboard = ({ alerts, refreshData }) => {
                             }} 
                         />
                     ) : (
-                        <div className="empty-state">
-                            <p>Select a high-priority signal from the table to begin aid verification.</p>
-                        </div>
+                        <div className="empty-state">Select a signal to begin.</div>
                     )}
                 </aside>
             </div>

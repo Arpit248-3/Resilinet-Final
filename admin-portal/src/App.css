@@ -176,3 +176,33 @@ body {
     justify-content: center;
     z-index: 1000;
 }
+/* App.css additions */
+.pulse-text {
+    animation: pulse 1.5s infinite;
+    color: var(--neon-blue);
+    font-weight: bold;
+    text-align: center;
+    margin-top: 15px;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.3; }
+    100% { opacity: 1; }
+}
+
+.btn-verify {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-main);
+    padding: 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-verify:hover {
+    background: rgba(0, 242, 255, 0.1);
+    border-color: var(--neon-blue);
+    color: var(--neon-blue);
+}
