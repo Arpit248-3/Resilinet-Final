@@ -206,3 +206,16 @@ body {
     border-color: var(--neon-blue);
     color: var(--neon-blue);
 }
+/* Update your CSS file */
+.dashboard-layout {
+  display: grid;
+  grid-template-columns: 350px 1fr; /* Sidebar for Feed, rest for Map */
+  height: 100vh;
+  background: #0a0a0a;
+}
+
+.live-feed {
+  overflow-y: scroll;
+  border-right: 1px solid #333;
+  padding: 20px;
+}

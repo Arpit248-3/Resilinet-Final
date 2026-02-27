@@ -1,75 +1,150 @@
-import React from 'react';
+import React, { useEffect, useState, useRef } from 'react';
+import axios from 'axios';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { MapContainer, TileLayer, useMap } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet.heat';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
+import { FileText, Download, Send } from 'lucide-react';
 
-const Analytics = ({ alerts }) => {
-    // 1. Safety Guard: Ensure alerts is always an array
-    const safeAlerts = Array.isArray(alerts) ? alerts : [];
+const PredictiveLayer = ({ points }) => {
+  const map = useMap();
+  useEffect(() => {
+    if (!map || points.length === 0) return;
+    const heatData = points.map(p => [p._id?.lat || 0, p._id?.lng || 0, p.intensity * 0.5]);
+    const layer = L.heatLayer(heatData, {
+      radius: 40, blur: 25, 
+      gradient: { 0.4: '#6a11cb', 0.7: '#ff8c00', 1.0: '#ff0000' } 
+    }).addTo(map);
+    return () => map.removeLayer(layer);
+  }, [map, points]);
+  return null;
+};
 
-    // 2. Safe Calculation for Severity Distribution
-    const severityData = safeAlerts.reduce((acc, alert) => {
-        const sev = alert.severity || 'Minor';
-        acc[sev] = (acc[sev] || 0) + 1;
-        return acc;
-    }, {});
+const Analytics = () => {
+  const [chartData, setChartData] = useState([]);
+  const [riskZones, setRiskZones] = useState([]);
+  const [isSending, setIsSending] = useState(false);
+  const reportRef = useRef(); 
 
-    // 3. Safe Calculation for Priority Average
-    const avgPriority = safeAlerts.length 
-        ? (safeAlerts.reduce((sum, a) => sum + (a.priorityScore || 0), 0) / safeAlerts.length).toFixed(1) 
-        : 0;
+  useEffect(() => {
+    const fetchAnalytics = async () => {
+      try {
+        const [weekly, predictive] = await Promise.all([
+          axios.get('http://172.16.14.31:5000/api/analytics/weekly'),
+          axios.get('http://172.16.14.31:5000/api/analytics/predictive').catch(() => ({data: []}))
+        ]);
+        setChartData(weekly.data.map(d => ({ name: d._id, value: d.count })));
+        setRiskZones(predictive.data);
+      } catch (e) { console.error("Analytics fetch failed", e); }
+    };
+    fetchAnalytics();
+  }, []);
 
-    return (
-        <div className="analytics-container">
-            <h2 style={{ color: 'var(--neon-blue)', marginBottom: '20px' }}>📈 SYSTEM INTELLIGENCE ANALYTICS</h2>
-            
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '30px' }}>
-                {/* Stat Card 1 */}
-                <div className="stat-card" style={{ background: 'var(--card-bg)', padding: '20px', borderRadius: '10px', border: '1px solid var(--border)' }}>
-                    <small style={{ color: '#64748b' }}>TOTAL ACTIVE SIGNALS</small>
-                    <h1 style={{ margin: '10px 0', color: '#fff' }}>{safeAlerts.length}</h1>
-                </div>
+  const generatePDFBlob = async () => {
+    const element = reportRef.current;
+    const canvas = await html2canvas(element, { backgroundColor: '#000', useCORS: true, scale: 2 });
+    const imgData = canvas.toDataURL('image/png');
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+    return pdf.output('datauristring');
+  };
 
-                {/* Stat Card 2 */}
-                <div className="stat-card" style={{ background: 'var(--card-bg)', padding: '20px', borderRadius: '10px', border: '1px solid var(--border)' }}>
-                    <small style={{ color: '#64748b' }}>AVG CLUSTER PRIORITY</small>
-                    <h1 style={{ margin: '10px 0', color: '#4dff88' }}>{avgPriority}</h1>
-                </div>
+  const exportPDF = async () => {
+    const dataUri = await generatePDFBlob();
+    const link = document.createElement('a');
+    link.href = dataUri;
+    link.download = `ResiliNet_Report_${new Date().toLocaleDateString()}.pdf`;
+    link.click();
+  };
 
-                {/* Stat Card 3 */}
-                <div className="stat-card" style={{ background: 'var(--card-bg)', padding: '20px', borderRadius: '10px', border: '1px solid var(--border)' }}>
-                    <small style={{ color: '#64748b' }}>MESH RELIABILITY</small>
-                    <h1 style={{ margin: '10px 0', color: 'var(--neon-blue)' }}>
-                        {safeAlerts.filter(a => a.isMeshVerified).length} / {safeAlerts.length}
-                    </h1>
-                </div>
-            </div>
+  const dispatchReport = async () => {
+    setIsSending(true);
+    try {
+      const pdfBase64 = await generatePDFBlob();
+      const res = await axios.post('http://172.16.14.31:5000/api/dispatch-report', {
+        pdfBase64,
+        recipientEmail: "authority-center@city.gov" // Change this to real email
+      });
+      alert(res.data.message);
+    } catch (err) {
+      alert("Dispatch failed. Check console.");
+      console.error(err);
+    } finally {
+      setIsSending(false);
+    }
+  };
 
-            <div style={{ background: 'var(--card-bg)', padding: '30px', borderRadius: '12px', border: '1px solid var(--border)' }}>
-                <h3>SEVERITY DISTRIBUTION</h3>
-                {safeAlerts.length === 0 ? (
-                    <p style={{ color: '#444' }}>No data available for visualization.</p>
-                ) : (
-                    <div style={{ marginTop: '20px' }}>
-                        {Object.entries(severityData).map(([key, val]) => (
-                            <div key={key} style={{ marginBottom: '15px' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
-                                    <span>{key}</span>
-                                    <span>{val} victims</span>
-                                </div>
-                                <div style={{ width: '100%', background: '#222', height: '10px', borderRadius: '5px' }}>
-                                    <div style={{ 
-                                        width: `${(val / safeAlerts.length) * 100}%`, 
-                                        background: key === 'Critical' ? '#ff3e3e' : '#ffaa00', 
-                                        height: '100%', 
-                                        borderRadius: '5px',
-                                        boxShadow: '0 0 10px rgba(255,255,255,0.1)'
-                                    }}></div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </div>
+  return (
+    <div style={{ color: '#fff', fontFamily: 'monospace' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <h2 style={{ color: '#00ff41', margin: 0 }}>📊 DISASTER INTELLIGENCE</h2>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button onClick={exportPDF} style={styles.exportBtn}>
+            <Download size={16} /> DOWNLOAD PDF
+          </button>
+          <button onClick={dispatchReport} style={{...styles.exportBtn, backgroundColor: '#e63946'}} disabled={isSending}>
+            <Send size={16} /> {isSending ? 'SENDING...' : 'DISPATCH TO AUTHORITIES'}
+          </button>
         </div>
-    );
+      </div>
+      
+      <div ref={reportRef} style={{ padding: '20px', backgroundColor: '#000' }}>
+        <div style={styles.reportHeader}>
+          <FileText color="#00ff41" />
+          <span style={{ marginLeft: '10px' }}>OFFICIAL INCIDENT SUMMARY | {new Date().toDateString()}</span>
+        </div>
+
+        <div style={{ display: 'flex', gap: '20px', marginBottom: '30px' }}>
+          <div style={styles.card}>
+            <h3>Incident Distribution (7 Days)</h3>
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#222" />
+                <XAxis dataKey="name" stroke="#888" />
+                <YAxis stroke="#888" />
+                <Tooltip contentStyle={{ background: '#000', border: '1px solid #333' }} />
+                <Bar dataKey="value" fill="#00ff41">
+                  {chartData.map((_, i) => <Cell key={i} fill={['#e63946', '#4dff88', '#ff8c00'][i % 3]} />)}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div style={styles.riskCard}>
+            <h3>AI Prediction</h3>
+            <p style={{ fontSize: '12px', color: '#aaa' }}>Zones with high repeat SOS activity.</p>
+            {riskZones.length > 0 ? riskZones.slice(0, 3).map((zone, i) => (
+              <div key={i} style={styles.riskItem}>
+                <span style={{ color: '#ff8c00' }}>Zone {i+1}: </span> 
+                {zone.intensity > 5 ? 'CRITICAL RISK' : 'MODERATE RISK'}
+              </div>
+            )) : <p style={{color: '#444'}}>No predictive data yet.</p>}
+          </div>
+        </div>
+
+        <div style={styles.mapBox}>
+          <h3 style={{ padding: '10px', background: '#111', margin: 0 }}>Predictive Risk Hotspots</h3>
+          <MapContainer center={[20.59, 78.96]} zoom={5} style={{ height: '350px' }}>
+            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+            <PredictiveLayer points={riskZones} />
+          </MapContainer>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const styles = {
+  exportBtn: { display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#00ff41', color: '#000', border: 'none', padding: '10px 15px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' },
+  reportHeader: { borderBottom: '1px solid #333', paddingBottom: '10px', marginBottom: '20px', display: 'flex', alignItems: 'center', color: '#888' },
+  card: { flex: 1, background: '#111', padding: '20px', borderRadius: '10px' },
+  riskCard: { width: '300px', background: '#111', padding: '20px', borderRadius: '10px', borderLeft: '4px solid #ff8c00' },
+  riskItem: { marginBottom: '10px', padding: '10px', background: '#222', borderRadius: '4px' },
+  mapBox: { borderRadius: '10px', overflow: 'hidden', border: '1px solid #333' }
 };
 
 export default Analytics;
