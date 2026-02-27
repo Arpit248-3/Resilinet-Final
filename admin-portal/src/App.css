@@ -152,3 +152,27 @@ body {
 ::-webkit-scrollbar-track { background: var(--bg-color); }
 ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--accent-neon); }
+/* Add to src/App.css */
+.priority-critical { color: #ff3e3e; font-weight: 900; text-shadow: 0 0 12px rgba(255, 62, 62, 0.5); }
+.priority-high { color: #ffaa00; font-weight: bold; }
+.priority-low { color: #00f2ff; }
+
+.badge-mesh {
+    background: rgba(0, 242, 255, 0.1);
+    color: var(--neon-blue);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    border: 1px solid var(--neon-blue);
+}
+
+.verify-modal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.8);
+    backdrop-filter: blur(5px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}

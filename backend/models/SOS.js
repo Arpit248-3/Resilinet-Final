@@ -1,13 +1,19 @@
 const mongoose = require('mongoose');
 
-const SOSSchema = new mongoose.Schema({
-    userId: { type: String, default: "Anonymous User" },
-    message: { type: String, default: "🚨 EMERGENCY SOS TRIGGERED" },
-    location: {
-        latitude: Number,
-        longitude: Number
-    },
-    timestamp: { type: Date, default: Date.now }
+const sosSchema = new mongoose.Schema({
+  userId: String,
+  severity: { type: String, enum: ['Minor', 'Moderate', 'Critical'] },
+  location: {
+    type: { type: String, default: 'Point' },
+    coordinates: [Number] // [longitude, latitude]
+  },
+  voiceTranscript: String,
+  isMeshVerified: { type: Boolean, default: false },
+  biometricHash: String,    // For the biometric fallback
+  handshakeToken: String,   // For the Cryptographic QR
+  status: { type: String, default: 'Active' },
+  timestamp: { type: Date, default: Date.now }
 });
 
-module.exports = mongoose.model('SOS', SOSSchema);
+sosSchema.index({ location: '2dsphere' }); // Crucial for clustering
+module.exports = mongoose.model('SOS', sosSchema);
