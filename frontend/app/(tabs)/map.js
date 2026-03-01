@@ -1,57 +1,66 @@
-import React, { useState } from 'react';
-import { StyleSheet, View, TouchableOpacity, Dimensions } from 'react-native'; 
+import React, { useState, useEffect, useRef } from 'react';
+import { StyleSheet, View, Text, ActivityIndicator } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
-import { Ionicons } from '@expo/vector-icons';
+import * as Location from 'expo-location';
 
-const INITIAL_LOCATION = {
-  latitude: 37.78825,
-  longitude: -122.4324,
-  latitudeDelta: 0.0922,
-  longitudeDelta: 0.0421,
-};
+export default function MapTab() {
+  const [region, setRegion] = useState(null);
+  const mapRef = useRef(null);
 
-export default function StatusMap() {
-  const [region, setRegion] = useState(INITIAL_LOCATION);
+  useEffect(() => {
+    (async () => {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') return;
+
+      let location = await Location.getCurrentPositionAsync({});
+      const userRegion = {
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+        latitudeDelta: 0.05,
+        longitudeDelta: 0.05,
+      };
+
+      setRegion(userRegion);
+      
+      // Forces the map to move away from San Francisco to your real location
+      if (mapRef.current) {
+        mapRef.current.animateToRegion(userRegion, 1000);
+      }
+    })();
+  }, []);
+
+  if (!region) {
+    return (
+      <View style={styles.loading}>
+        <ActivityIndicator size="large" color="#00ff00" />
+        <Text style={{color: '#fff', marginTop: 10}}>Fetching Local Intelligence...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
       <MapView
-        provider={PROVIDER_GOOGLE}
+        ref={mapRef}
+        // The key forces a re-render so it doesn't get stuck in San Francisco
+        key={`${region.latitude}-${region.longitude}`}
         style={styles.map}
-        region={region} 
-        onRegionChangeComplete={(newRegion) => setRegion(newRegion)} 
-        userInterfaceStyle="dark" 
+        provider={PROVIDER_GOOGLE}
+        initialRegion={region}
+        showsUserLocation={true}
       >
-        <Marker coordinate={{ latitude: 37.78825, longitude: -122.4324 }} title="Safe Zone Alpha">
-          <View style={[styles.markerCircle, { backgroundColor: '#2ecc71' }]}>
-            <Ionicons name="shield-checkmark" size={20} color="white" />
-          </View>
-        </Marker>
-
         <Marker 
-          coordinate={{ latitude: 37.7910, longitude: -122.4350 }} 
-          title="User: Arpit" 
-          description="Status: SAFE"
-        >
-          <View style={[styles.markerCircle, { backgroundColor: '#3498db' }]}>
-            <Ionicons name="person" size={18} color="white" />
-          </View>
-        </Marker>
+          coordinate={{ latitude: region.latitude, longitude: region.longitude }}
+          title="You are here"
+          description="Local monitoring active"
+        />
       </MapView>
-
-      <TouchableOpacity 
-        style={styles.myLocationBtn} 
-        onPress={() => setRegion(INITIAL_LOCATION)} 
-      >
-        <Ionicons name="locate" size={24} color="#e63946" />
-      </TouchableOpacity>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#000' },
-  map: { width: Dimensions.get('window').width, height: Dimensions.get('window').height },
-  markerCircle: { padding: 8, borderRadius: 20, borderWidth: 2, borderColor: '#fff' },
-  myLocationBtn: { position: 'absolute', bottom: 30, right: 20, backgroundColor: '#fff', width: 56, height: 56, borderRadius: 28, justifyContent: 'center', alignItems: 'center', elevation: 8 },
+  container: { flex: 1 },
+  map: { width: '100%', height: '100%' },
+  loading: { flex: 1, backgroundColor: '#000', justifyContent: 'center', alignItems: 'center' }
 });
