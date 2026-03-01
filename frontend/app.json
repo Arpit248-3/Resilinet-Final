@@ -3,36 +3,18 @@
     "name": "ResiliNetTest",
     "slug": "resilinet-test",
     "version": "1.0.0",
-    "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
-    "scheme": "frontend",
-    "userInterfaceStyle": "automatic",
-    "newArchEnabled": false, 
-    "ios": {
-      "supportsTablet": true,
-      "infoPlist": {
-        "NSAppTransportSecurity": {
-          "NSAllowsArbitraryLoads": true
-        }
-      }
-    },
+    "newArchEnabled": true, 
     "android": {
-      "usesCleartextTraffic": true,
-      "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png"
-      },
       "permissions": [
-        "android.permission.CAMERA"
+        "android.permission.CAMERA",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.RECORD_AUDIO"
       ],
       "package": "com.anonymous.frontend"
     },
     "plugins": [
       "expo-router",
-      "expo-barcode-scanner"
-    ],
-    "experiments": {
-      "typedRoutes": true
-    }
+      "expo-location"
+    ]
   }
 }
