@@ -1,39 +1,129 @@
-import React from 'react';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, Linking, Platform, StyleSheet, ScrollView, Alert } from 'react-native';
+import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 
-// Screen Imports
-import SOSScreen from '../../screens/SOSScreen.js'; 
-import OfflineGuide from '../../screens/OfflineGuide.js';
-import StatusMap from '../../screens/StatusMap.js';
+const SOS_TARGET_NUMBER = "6260055671";
+const BACKEND_IP = "172.16.14.31"; 
 
-// Triage is disabled to prevent the FaceDetector crash
-// import HealthCheck from '../../components/HealthCheck.js';
+const SOS_OPTIONS = [
+  { id: 'medical', label: 'MEDICAL', icon: 'medkit', color: '#ff4d4d' },
+  { id: 'fire', label: 'FIRE', icon: 'flame', color: '#ff944d' },
+  { id: 'security', label: 'POLICE', icon: 'shield-checkmark', color: '#4d79ff' },
+  { id: 'disaster', label: 'DISASTER', icon: 'thunderstorm', color: '#ffcc00' },
+  { id: 'cyber', label: 'CYBER', icon: 'lock-closed', color: '#9933ff' },
+  { id: 'marine', label: 'MARINE', icon: 'boat', color: '#33ccff' }
+];
 
-const Tab = createBottomTabNavigator();
+export default function SOSScreen() {
+  const [location, setLocation] = useState(null);
+  const [address, setAddress] = useState("Detecting location...");
 
-export default function App() {
+  useEffect(() => {
+    (async () => {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        setAddress("Permission Denied");
+        return;
+      }
+      let loc = await Location.getCurrentPositionAsync({});
+      setLocation(loc.coords);
+      
+      let reverseToken = await Location.reverseGeocodeAsync({
+        latitude: loc.coords.latitude,
+        longitude: loc.coords.longitude
+      });
+      if (reverseToken.length > 0) {
+        const item = reverseToken[0];
+        setAddress(`${item.name || ''}, ${item.street || ''}, ${item.city || ''}`);
+      }
+    })();
+  }, []);
+
+  const processSOS = async (type, priority) => {
+    const lat = location.latitude;
+    const lon = location.longitude;
+    const googleMapsUrl = `http://maps.google.com/?q=${lat},${lon}`;
+    
+    const message = `[${priority} SOS] ${type.toUpperCase()}\nLoc: ${address}\nMap: ${googleMapsUrl}`;
+
+    const smsUrl = Platform.OS === 'ios' 
+      ? `sms:${SOS_TARGET_NUMBER}&body=${encodeURIComponent(message)}` 
+      : `sms:${SOS_TARGET_NUMBER}?body=${encodeURIComponent(message)}`;
+
+    try {
+      await fetch(`http://${BACKEND_IP}:5000/api/sos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: "Arpit",
+          phone: SOS_TARGET_NUMBER,
+          category: type,
+          priority: priority,
+          location: { latitude: lat, longitude: lon, address: address }
+        })
+      });
+    } catch (_error) {
+      console.error("Backend offline, sending SMS only.");
+    }
+
+    Linking.openURL(smsUrl);
+  };
+
+  const triggerSOS = async (type) => {
+    if (!location) {
+      Alert.alert("Error", "Location not yet acquired. Please wait.");
+      return;
+    }
+
+    Alert.alert(
+      "Confirm Priority",
+      "Is this a life-threatening immediate emergency?",
+      [
+        { text: "NO (Standard)", onPress: () => processSOS(type, "STANDARD") },
+        { text: "YES (Critical)", onPress: () => processSOS(type, "CRITICAL"), style: 'destructive' }
+      ]
+    );
+  };
+
   return (
-    <Tab.Navigator
-      screenOptions={({ route }) => ({
-        tabBarIcon: ({ focused, color, size }) => {
-          let iconName;
-          if (route.name === 'SOS') iconName = focused ? 'alert-circle' : 'alert-circle-outline';
-          else if (route.name === 'Guide') iconName = focused ? 'book' : 'book-outline';
-          else if (route.name === 'Map') iconName = focused ? 'map' : 'map-outline';
-          
-          return <Ionicons name={iconName} size={size} color={color} />;
-        },
-        tabBarActiveTintColor: '#e63946',
-        tabBarInactiveTintColor: 'gray',
-        headerTitleAlign: 'center',
-        headerTitleStyle: { fontWeight: 'bold', color: '#e63946' },
-      })}
-    >
-      <Tab.Screen name="SOS" component={SOSScreen} options={{ title: 'EMERGENCY' }} />
-      {/* Triage Screen is hidden to avoid native module errors */}
-      <Tab.Screen name="Guide" component={OfflineGuide} options={{ title: 'SURVIVAL GUIDE' }} />
-      <Tab.Screen name="Map" component={StatusMap} options={{ title: 'SAFE ZONES' }} />
-    </Tab.Navigator>
+    <ScrollView style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>RESILINET SOS</Text>
+        <Text style={styles.locationText}>📍 {address}</Text>
+      </View>
+
+      <View style={styles.grid}>
+        {SOS_OPTIONS.map((opt) => (
+          <TouchableOpacity 
+            key={opt.id} 
+            style={[styles.sosButton, { backgroundColor: opt.color }]} 
+            onPress={() => triggerSOS(opt.label)}
+          >
+            <Ionicons name={opt.icon} size={40} color="#fff" />
+            <Text style={styles.buttonLabel}>{opt.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+      
+      <View style={styles.footer}>
+        <Text style={styles.footerInfo}>Alerts will be sent to Authorities and {SOS_TARGET_NUMBER}</Text>
+      </View>
+    </ScrollView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#000' },
+  header: { padding: 30, backgroundColor: '#111', borderBottomWidth: 2, borderBottomColor: '#ff4d4d' },
+  headerTitle: { color: '#ff4d4d', fontSize: 28, fontWeight: 'bold', textAlign: 'center' },
+  locationText: { color: '#888', textAlign: 'center', marginTop: 10, fontSize: 12 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-around', padding: 10 },
+  sosButton: { 
+    width: '45%', height: 140, justifyContent: 'center', alignItems: 'center', 
+    marginVertical: 10, borderRadius: 20, elevation: 5
+  },
+  buttonLabel: { color: '#fff', fontWeight: 'bold', marginTop: 10, fontSize: 16 },
+  footer: { padding: 20, alignItems: 'center' },
+  footerInfo: { color: '#555', fontSize: 11, textAlign: 'center' }
+});
