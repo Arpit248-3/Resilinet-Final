@@ -1,6 +1,32 @@
-// src/constants.js
-const SERVER_IP = "172.16.14.31"; 
+/**
+ * TACTICAL NETWORK CONFIGURATION
+ * This file dynamically detects the host environment to ensure
+ * cross-device compatibility without manual IP reconfiguration.
+ */
 
-export const API_ALERTS = `http://${SERVER_IP}:5000/api/alerts`;
-export const API_TRIAGE = `http://${SERVER_IP}:5000/api/trigger-cluster-escalation`;
-export const API_DISTRIBUTE = `http://${SERVER_IP}:5000/api/distribute-aid`;
+// Dynamically fetch the current hostname (IP or domain) of the server
+const HOST = window.location.hostname; 
+
+// Configuration for Backend Port
+const PORT = "5000";
+
+// Base URL Construction
+const BASE_URL = `http://${HOST}:${PORT}`;
+
+// --- EXPORTED API ENDPOINTS ---
+
+export const API_BASE = BASE_URL;
+export const API_ALERTS = `${BASE_URL}/api/alerts`;
+export const API_TRIAGE = `${BASE_URL}/api/trigger-cluster-escalation`;
+export const API_DISTRIBUTE = `${BASE_URL}/api/distribute-aid`;
+
+// Analytics Endpoints (Used in Analytics.js)
+export const API_ANALYTICS_WEEKLY = `${BASE_URL}/api/analytics/weekly`;
+export const API_ANALYTICS_PREDICTIVE = `${BASE_URL}/api/analytics/predictive`;
+export const API_DISPATCH_REPORT = `${BASE_URL}/api/dispatch-report`;
+
+/**
+ * UTILITY: SOCKET CONFIGURATION
+ * Use this in your socket.io-client initialization
+ */
+export const SOCKET_URL = BASE_URL;

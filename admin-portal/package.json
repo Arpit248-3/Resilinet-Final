@@ -1,32 +1,35 @@
 {
-  "name": "admin-portal",
+  "name": "resilinet-admin-portal",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@testing-library/dom": "^10.4.1",
-    "@testing-library/jest-dom": "^6.9.1",
-    "@testing-library/react": "^16.3.2",
-    "@testing-library/user-event": "^13.5.0",
-    "axios": "^1.13.5",
-    "chart.js": "^4.5.1",
+    "axios": "^1.13.6",
+    "expo-server-sdk": "^6.0.0",
     "html2canvas": "^1.4.1",
-    "jspdf": "^4.2.0",
+    "jspdf": "^2.5.2",
     "leaflet": "^1.9.4",
-    "leaflet.heat": "^0.2.0",
-    "lucide-react": "^0.575.0",
-    "react": "^19.2.4",
-    "react-chartjs-2": "^5.3.1",
-    "react-dom": "^19.2.4",
-    "react-leaflet": "^5.0.0",
+    "lucide-react": "^0.263.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-leaflet": "^4.2.1",
     "react-scripts": "5.0.1",
-    "recharts": "^3.7.0",
+    "recharts": "^2.15.4",
+    "socket.io-client": "^4.8.3",
     "web-vitals": "^2.1.4"
   },
   "scripts": {
+    "prestart": "node src/test-check.js",
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
+    "test:check": "node src/test-check.js",
     "eject": "react-scripts eject"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^5.16.5",
+    "@testing-library/react": "^13.4.0",
+    "@testing-library/user-event": "^13.5.0",
+    "jest-canvas-mock": "^2.5.2"
   },
   "eslintConfig": {
     "extends": [

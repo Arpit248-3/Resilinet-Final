@@ -1,70 +1,68 @@
-# Getting Started with Create React App
+🛡️ ResiliNet: Tactical Command Suite (v2.0)
+ResiliNet is a high-performance emergency response dashboard. It features a dynamic-IP backend handshake, real-time biometric monitoring (Danger Zones), and AI-driven resource allocation (Mutual Aid).
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+🚀 Quick Start Guide
+1. Prerequisites
+Ensure you have the following installed:
 
-## Available Scripts
+Node.js (v16.x or higher)
 
-In the project directory, you can run:
+npm or yarn
 
-### `npm start`
+Backend Server (Running on port 5000)
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+2. Installation
+Clone the repository and install the tactical dependencies, including the canvas mock required for our test suite:
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+Bash
+npm install
+npm install --save-dev jest-canvas-mock
+3. Dynamic IP Configuration
+This system uses an automated handshake to find your backend, whether on localhost or a local network.
 
-### `npm test`
+Open src/constants.js.
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+The system will automatically detect if you are in a production or development environment and route API calls to the correct IP address.
 
-### `npm run build`
+4. Launching the System
+Bash
+npm start
+The dashboard will initialize the Neural Network Background and begin the Socket.io Handshake with the Tactical Dispatch server.
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+🛠️ Key System Components
+🛰️ Command Map (Dashboard.js)
+Biometric Alerts: Automatically triggers a danger-zone-glow animation if a citizen's heart rate exceeds 120 BPM.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+Mutual Aid: When local units are depleted, the system activates "Mutual Aid" mode, bringing in external units from neighboring sectors.
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+Sector Handover: Encrypted data transfer tool to move an alert from local control to an external regional unit.
 
-### `npm run eject`
+🧠 System Intelligence (Analytics.js)
+Efficiency Tracking: Compares AI-driven dispatch times against manual historical averages.
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+PDF Export: Generates a tactical intelligence report using html2canvas and jsPDF.
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+🧪 Stability & Testing (setupTests.js)
+The testing environment is pre-configured to handle tactical visualizations:
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+Canvas Mocks: Supports the Neural Network background and Recharts.
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+Observer Mocks: Handles layout calculations for the Map and Sidebar.
 
-## Learn More
+Linting: Optimized for Zero Problems—no useless constructors or unused variables.
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+🎨 UI & Aesthetics
+The UI is governed by a "Tactical Dark" theme defined in App.css and index.css. Key classes include:
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+.danger-zone-glow: Red pulsing border for critical medical alerts.
 
-### Code Splitting
+.neon-line-animate: Glowing trajectory paths between units and citizens.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+.radar-ring-animate: Pulsing range indicators for Mutual Aid units.
 
-### Analyzing the Bundle Size
+⚠️ Troubleshooting
+White Flash on Load: Ensure index.css has background-color: #06070a set on the body to prevent visual lag.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+Map Not Loading: Check the console for [NETWORK_ALERT]. This indicates the dynamic IP handshake in constants.js could not find the backend server.
 
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+Test Failures: Ensure jest-canvas-mock is installed, as the tactical UI relies on canvas rendering for background effects.

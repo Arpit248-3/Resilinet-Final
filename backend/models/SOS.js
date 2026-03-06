@@ -1,30 +1,76 @@
 const mongoose = require('mongoose');
 
-const sosSchema = new mongoose.Schema({
-  name: { type: String, default: 'Anonymous' },
-  phone: { type: String, default: '6260055671' },
-  message: String,
-  category: { 
-    type: String, 
-    enum: ['MEDICAL', 'FIRE', 'POLICE', 'General'], 
-    default: 'General' 
-  },
-  ai_insight: { type: String, default: 'Analyzing situation...' },
-  location: {
-    type: { type: String, default: 'Point' },
-    coordinates: { type: [Number], required: true } // [longitude, latitude]
-  },
-  status: { 
-    type: String, 
-    enum: ['Active', 'Resolved'], 
-    default: 'Active' 
-  },
-  priorityScore: { type: Number, default: 0 },
-  isMeshVerified: { type: Boolean, default: false },
-  timestamp: { type: Date, default: Date.now }
-});
+/**
+ * SOS ALERT SCHEMA v2.0
+ * Optimized for Biometric Triage, Geospatial Analytics, 
+ * and Mutual Aid Sector Handovers.
+ */
+const SOSSchema = new mongoose.Schema({
+    name: { 
+        type: String, 
+        default: "Anonymous User" 
+    },
+    email: { 
+        type: String, 
+        default: "Not Provided" 
+    },
+    phone: { 
+        type: String, 
+        required: true 
+    },
+    // Expanded categories to match PriorityEngine.js
+    category: { 
+        type: String, 
+        enum: ['FIRE', 'MEDICAL', 'POLICE', 'ACCIDENT', 'General'], 
+        default: 'General' 
+    },
+    priority: { 
+        type: String, 
+        enum: ['Critical', 'High', 'Medium', 'Low'], 
+        default: 'Medium' 
+    },
+    // BIOMETRIC DATA: Triggers the "Danger Zone" animations in Dashboard.js
+    heartRate: { 
+        type: Number, 
+        default: 75 
+    },
+    // SECTOR: Essential for Mutual Aid filtering
+    sector: { 
+        type: String, 
+        default: 'Local' 
+    },
+    location: {
+        type: { 
+            type: String, 
+            enum: ['Point'], 
+            default: 'Point' 
+        },
+        coordinates: { 
+            type: [Number], // [longitude, latitude]
+            required: true 
+        }
+    },
+    // Handed Over status used when dispatching to External Sectors
+    status: { 
+        type: String, 
+        enum: ['Active', 'Dispatched', 'Handed Over', 'Resolved'], 
+        default: 'Active' 
+    },
+    assignedResponder: { 
+        type: mongoose.Schema.Types.ObjectId, 
+        ref: 'Responder', 
+        default: null 
+    },
+    timestamp: { 
+        type: Date, 
+        default: Date.now 
+    }
+}, { timestamps: true });
 
-// Important for geospatial queries (Live Maps)
-sosSchema.index({ location: "2dsphere" });
+// 2dsphere index for proximity alerts and cluster heatmaps
+SOSSchema.index({ location: '2dsphere' });
 
-module.exports = mongoose.model('SOS', sosSchema);
+// Compound index for high-speed filtering in the Alerts Sidebar
+SOSSchema.index({ status: 1, priority: 1 });
+
+module.exports = mongoose.model('SOS', SOSSchema);

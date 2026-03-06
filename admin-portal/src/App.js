@@ -1,93 +1,143 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import './App.css'; 
-import Sidebar from './components/Sidebar';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
-import Analytics from './pages/analytics'; 
-import { API_ALERTS } from './constants';
+
+/**
+ * TACTICAL COMMAND CENTER - CORE BOOTLOADER
+ * Integration Level: 4.0 (Full Suite Sync)
+ * * This file serves as the secure entry point for the Admin Portal.
+ * It manages authentication state and ensures the Dashboard 
+ * environment is initialized only after successful handshake.
+ */
 
 function App() {
+  // Authentication State
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [activeTab, setActiveTab] = useState('map');
-  const [alerts, setAlerts] = useState([]);
-  const [lastUpdated, setLastUpdated] = useState(new Date());
-  const [isDark, setIsDark] = useState(true);
-  const [isTriageLoading, setIsTriageLoading] = useState(false);
-  const prevAlertCount = useRef(0);
+  const [isBooting, setIsBooting] = useState(true);
 
-  const alertSound = useMemo(() => new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3'), []);
-
-  const fetchData = useCallback(async () => {
-    try {
-      // FIXED: Used API_ALERTS constant here to resolve the error
-      const res = await fetch(API_ALERTS);
-      const data = await res.json();
-      
-      if (data.length > prevAlertCount.current && prevAlertCount.current !== 0) {
-        alertSound.play().catch(e => console.log("Audio play blocked."));
-      }
-      
-      prevAlertCount.current = data.length;
-      setAlerts(data);
-      setLastUpdated(new Date());
-    } catch (e) { 
-      console.error("Connection Error to " + API_ALERTS); 
+  // Persistence Check: Keeps user logged in on page refresh
+  useEffect(() => {
+    const sessionActive = localStorage.getItem('admin_session_active');
+    if (sessionActive === 'true') {
+      setIsLoggedIn(true);
     }
-  }, [alertSound]);
+    
+    // Simulate system boot sequence for aesthetic consistency
+    const timer = setTimeout(() => setIsBooting(false), 1200);
+    return () => clearTimeout(timer);
+  }, []);
 
-  const handleVisualTriage = async () => {
-    setIsTriageLoading(true);
-    try {
-      // Assuming your constant is http://.../api/alerts, we reach the triage endpoint like this:
-      const triageUrl = API_ALERTS.replace('/alerts', '/trigger-cluster-escalation');
-      await fetch(triageUrl, { method: 'POST' });
-      await fetchData(); 
-    } catch (err) {
-      console.error("Triage Failed", err);
-    } finally {
-      setIsTriageLoading(false);
-    }
+  // Handle Secure Login
+  const handleLogin = () => {
+    localStorage.setItem('admin_session_active', 'true');
+    setIsLoggedIn(true);
   };
 
-  useEffect(() => {
-    if (isLoggedIn) {
-      fetchData();
-      const interval = setInterval(fetchData, 5000);
-      return () => clearInterval(interval);
-    }
-  }, [isLoggedIn, fetchData]);
+  // Handle Secure Logout
+  const handleLogout = () => {
+    localStorage.removeItem('admin_session_active');
+    setIsLoggedIn(false);
+  };
 
-  if (!isLoggedIn) return <Login onLogin={() => setIsLoggedIn(true)} />;
-
-  return (
-    <div className={isDark ? 'app-container' : 'app-container light-theme'} style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#000' }}>
-      <Sidebar 
-        setActiveTab={setActiveTab} 
-        activeTab={activeTab} 
-        onLogout={() => setIsLoggedIn(false)} 
-        isDark={isDark}
-        toggleTheme={() => setIsDark(!isDark)}
-      />
-      
-      <main style={{ flex: 1, padding: '30px', overflowY: 'auto' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', color: '#666', marginBottom: '10px', fontSize: '12px', fontFamily: 'monospace' }}>
-          <span>NODE: MESH_SYNC_ACTIVE {isTriageLoading && " | 📡 ANALYZING CLUSTERS..."}</span>
-          <span>LAST INTEL: {lastUpdated.toLocaleTimeString()}</span>
+  // 1. Initial System Bootup (Loading Overlay)
+  if (isBooting) {
+    return (
+      <div style={bootingOverlayStyle}>
+        <div className="scanner-line"></div>
+        <h2 style={bootingTextStyle}>INITIALIZING_COMMAND_SUITE...</h2>
+        {/* Added data-testid here to support updated app.test.js without direct Node access */}
+        <div style={progressBarContainer} data-testid="boot-progress">
+          <div className="progress-fill"></div>
         </div>
+      </div>
+    );
+  }
 
-        {activeTab === 'map' ? (
-          <Dashboard 
-            alerts={alerts} 
-            refreshData={fetchData} 
-            runVisualTriage={handleVisualTriage}
-            isTriageLoading={isTriageLoading} 
-          />
-        ) : (
-          <Analytics />
-        )}
-      </main>
+  // 2. Authentication Shield
+  if (!isLoggedIn) {
+    return <Login onLogin={handleLogin} />;
+  }
+
+  // 3. Authorized Environment (Dashboard Core)
+  return (
+    <div className="app-container" style={appContainerStyle}>
+      {/* Dashboard now manages:
+          - Real-time Sockets
+          - IncidentTable.js (Tactical Log)
+          - Analytics.js (Predictive Intelligence)
+          - SuccessModal.js (Aid Authorization)
+      */}
+      <Dashboard onLogout={handleLogout} />
+
+      {/* Global CSS for Boot Animations */}
+      <style>
+        {`
+          @keyframes scan {
+            0% { top: 0%; }
+            100% { top: 100%; }
+          }
+          @keyframes fillProgress {
+            0% { width: 0%; }
+            100% { width: 100%; }
+          }
+          .scanner-line {
+            position: absolute;
+            width: 100%;
+            height: 2px;
+            background: rgba(0, 255, 65, 0.5);
+            box-shadow: 0 0 15px #00ff41;
+            animation: scan 2s linear infinite;
+          }
+          .progress-fill {
+            height: 100%;
+            background: #00ff41;
+            width: 0%;
+            animation: fillProgress 1.2s ease-out forwards;
+          }
+          .app-container {
+            background-color: #06070a;
+            min-height: 100vh;
+            color: #ffffff;
+          }
+        `}
+      </style>
     </div>
   );
 }
+
+// --- SYSTEM STYLES ---
+
+const bootingOverlayStyle = {
+  height: '100vh',
+  width: '100vw',
+  backgroundColor: '#000',
+  display: 'flex',
+  flexDirection: 'column',
+  justifyContent: 'center',
+  alignItems: 'center',
+  position: 'relative',
+  overflow: 'hidden'
+};
+
+const bootingTextStyle = {
+  color: '#00ff41',
+  fontFamily: 'monospace',
+  fontSize: '14px',
+  letterSpacing: '4px',
+  marginBottom: '20px'
+};
+
+const progressBarContainer = {
+  width: '300px',
+  height: '4px',
+  backgroundColor: '#111',
+  borderRadius: '2px',
+  overflow: 'hidden'
+};
+
+const appContainerStyle = {
+  overflow: 'hidden'
+};
 
 export default App;

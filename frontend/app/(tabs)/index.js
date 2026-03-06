@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Alert, Share } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import * as Network from 'expo-network';
+import { Audio } from 'expo-av';
 
 const SOS_TARGET_NUMBER = "6260055671";
-const BACKEND_URL = "http://172.16.14.31:5000/api/sos"; // Replace with your laptop's IP
+const BACKEND_URL = "http://172.16.14.31:5000/api/sos"; 
 
 const SOS_OPTIONS = [
   { id: 'medical', label: 'MEDICAL', icon: 'medkit', color: '#ff4d4d' },
@@ -15,6 +16,8 @@ const SOS_OPTIONS = [
 
 export default function SOSScreen() {
   const [location, setLocation] = useState(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const recordingRef = useRef(null);
 
   useEffect(() => {
     (async () => {
@@ -22,46 +25,73 @@ export default function SOSScreen() {
       if (status !== 'granted') return;
       let currentLoc = await Location.getCurrentPositionAsync({});
       setLocation(currentLoc.coords);
+      await Audio.requestPermissionsAsync();
     })();
   }, []);
 
-  const triggerSOS = async (type) => {
-    const googleMapsUrl = location 
-      ? `https://www.google.com/maps?q=${location.latitude},${location.longitude}` 
-      : "Location Unknown";
-    
-    const message = `🚨 RESILINET SOS: ${type} 🚨\nTime: ${new Date().toLocaleString()}\nLocation: ${googleMapsUrl}`;
-
-    // Check Connection
+  const triggerSOS = async (type, voiceUri) => {
     const network = await Network.getNetworkStateAsync();
 
-    if (network.isInternetReachable) {
-      // ONLINE: Send to Backend (Email + Admin Portal)
+    if (network.isInternetReachable && location) {
+      const formData = new FormData();
+      formData.append('audio', {
+        uri: voiceUri,
+        name: `sos_${Date.now()}.m4a`,
+        type: 'audio/m4a',
+      });
+      formData.append('phone', SOS_TARGET_NUMBER);
+      formData.append('category', type);
+      formData.append('latitude', location.latitude.toString());
+      formData.append('longitude', location.longitude.toString());
+
       try {
         const response = await fetch(BACKEND_URL, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            category: type,
-            location: { latitude: location.latitude, longitude: location.longitude },
-            phone: SOS_TARGET_NUMBER,
-            timestamp: new Date()
-          }),
+          body: formData,
+          headers: { 'Content-Type': 'multipart/form-data' },
         });
-        if (response.ok) Alert.alert("Online Alert", "SOS logged and Email sent to Admin.");
-      } catch (_error) {
-        console.log("Backend sync failed, showing App Chooser...");
+
+        if (response.ok) {
+          Alert.alert("Success", "Audio SOS uploaded to ResiliNet Hub.");
+        }
+      } catch (err) {
+        console.log("Offline fallback triggered:", err);
       }
     }
 
-    // OFFLINE or Always: Show App Chooser (WhatsApp, SMS, etc.)
+    const message = `🚨 SOS: ${type} 🚨\nLocation: https://www.google.com/maps?q=${location?.latitude},${location?.longitude}`;
+    await Share.share({ message });
+  };
+
+  const startVoiceCapture = async () => {
     try {
-      await Share.share({
-        message: message,
-        title: 'Emergency SOS',
-      });
-    } catch (_error) {
-      Alert.alert("Error", "Could not open sharing menu");
+      if (recordingRef.current) {
+        await recordingRef.current.stopAndUnloadAsync().catch(() => {});
+        recordingRef.current = null;
+      }
+      await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
+      const { recording } = await Audio.Recording.createAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
+      recordingRef.current = recording;
+      setIsRecording(true);
+    } catch (err) { 
+      console.error("Recording Start Error:", err); 
+    }
+  };
+
+  const stopAndTriggerSOS = async (type) => {
+    setIsRecording(false);
+    if (!recordingRef.current) return;
+    try {
+      const status = await recordingRef.current.getStatusAsync();
+      if (status.isRecording || status.canRecord) {
+        await recordingRef.current.stopAndUnloadAsync();
+        const uri = recordingRef.current.getURI();
+        recordingRef.current = null;
+        await triggerSOS(type, uri);
+      }
+    } catch (error) {
+      console.error("Stop Error:", error);
+      recordingRef.current = null;
     }
   };
 
@@ -69,14 +99,17 @@ export default function SOSScreen() {
     <ScrollView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>RESILINET SOS</Text>
-        <Text style={styles.subText}>Tap an icon for immediate help</Text>
+        <Text style={[styles.subText, isRecording && {color: '#00ff41', fontWeight: 'bold'}]}>
+          {isRecording ? "🔴 RECORDING... RELEASE TO SEND" : "HOLD A BUTTON TO RECORD SOS"}
+        </Text>
       </View>
       <View style={styles.grid}>
         {SOS_OPTIONS.map((option) => (
           <TouchableOpacity 
             key={option.id} 
             style={[styles.sosButton, { backgroundColor: option.color }]} 
-            onPress={() => triggerSOS(option.label)}
+            onPressIn={startVoiceCapture}
+            onPressOut={() => stopAndTriggerSOS(option.label)}
           >
             <Ionicons name={option.icon} size={50} color="#fff" />
             <Text style={styles.buttonLabel}>{option.label}</Text>
@@ -91,8 +124,8 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000' },
   header: { padding: 40, paddingTop: 60, alignItems: 'center' },
   headerTitle: { color: '#ff4d4d', fontSize: 28, fontWeight: 'bold' },
-  subText: { color: '#888', marginTop: 5 },
+  subText: { color: '#888', marginTop: 10, textAlign: 'center' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', marginTop: 20 },
-  sosButton: { width: 160, height: 160, margin: 10, borderRadius: 25, justifyContent: 'center', alignItems: 'center', elevation: 10 },
-  buttonLabel: { color: '#fff', fontWeight: 'bold', marginTop: 15, fontSize: 16 }
+  sosButton: { width: 160, height: 160, margin: 10, borderRadius: 25, justifyContent: 'center', alignItems: 'center' },
+  buttonLabel: { color: '#fff', fontWeight: 'bold', marginTop: 15 }
 });

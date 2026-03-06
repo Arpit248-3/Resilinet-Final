@@ -1,12 +1,11 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import 'react-native-reanimated'; // This helps fix the Worklets error
+import 'react-native-reanimated'; 
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export const unstable_settings = {
-  // Ensure that reloading on `/guide-detail` keeps a back button present.
   initialRouteName: '(tabs)',
 };
 
@@ -15,23 +14,36 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        {/* Main Tab Navigation */}
+      <Stack screenOptions={{ 
+        animation: 'slide_from_right',
+        headerStyle: { backgroundColor: '#000' },
+        headerTintColor: '#fff',
+        headerTitleStyle: { fontWeight: 'bold' }
+      }}>
+        {/* Main Tab System */}
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         
-        {/* Guide Detail Screen (merged from your .js file) */}
+        {/* Guide Detail as a Modal */}
         <Stack.Screen 
           name="guide-detail" 
           options={{ 
             presentation: 'modal', 
-            headerShown: false 
+            headerShown: true,
+            title: "Emergency Instructions",
+            animation: 'slide_from_bottom'
           }} 
         />
 
-        {/* Default Modal Screen */}
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+        {/* Info/Generic Modal */}
+        <Stack.Screen 
+          name="modal" 
+          options={{ 
+            presentation: 'transparentModal', 
+            title: 'Information' 
+          }} 
+        />
       </Stack>
-      <StatusBar style="auto" />
+      <StatusBar style="light" />
     </ThemeProvider>
   );
 }
